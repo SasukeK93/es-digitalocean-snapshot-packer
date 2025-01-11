@@ -1,0 +1,36 @@
+---
+# playbook.yml
+
+- name: 'Provision Eventstore'
+  hosts: default
+  become: true
+
+  tasks:
+    - name: Wait for apt lock to be released
+      shell: while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done;
+
+    - name: Distribution setup
+      shell: |
+        curl -s https://packagecloud.io/install/repositories/EventStore/EventStore-OSS/script.deb.sh | sudo bash
+
+    - name: 'Install EventStore'
+      apt:
+        name: eventstore-oss=24.6.0
+        state: present
+        update_cache: true
+
+    - name: Start EventStore service
+      systemd:
+        name: eventstore
+        state: stopped
+
+    - name: Create certificate directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: eventstore
+        group: eventstore
+      with_items:
+        - /etc/eventstore/certs
+        - /etc/eventstore/certs/ca
